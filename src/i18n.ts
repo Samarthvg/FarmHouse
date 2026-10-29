@@ -99,6 +99,15 @@ export function unitName(unit: Unit, lang: Lang): string {
   return UNIT_NAMES[unit][lang];
 }
 
+export function personName(p: { name: string; nameHi?: string | null }, lang: Lang): string {
+  return lang === 'hi' && p.nameHi ? p.nameHi : p.name;
+}
+
+/** First letter for an avatar; whole code points, so a Devanagari name is never cut mid-letter. */
+export function initial(name: string): string {
+  return (Array.from(name.trim())[0] ?? '').toUpperCase();
+}
+
 export function categoryName(c: Category | undefined, lang: Lang): string {
   if (!c) return '—';
   return lang === 'hi' ? c.nameHi : c.nameEn;

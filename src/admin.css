@@ -122,6 +122,10 @@ button.stat:hover { border-color: var(--text-3); }
 .settings-main { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex: 1; min-width: 0; }
 .settings-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .inline-form { display: flex; gap: 8px; width: 100%; max-width: 320px; }
+/* Under a settings row the form takes a line of its own instead of squeezing the row. */
+.settings-row > .inline-form { flex: 1 0 100%; max-width: none; }
+.settings-row > .inline-form .input { max-width: 220px; }
+.inline-form .input { min-width: 0; }
 .sub-form { width: 100%; display: grid; gap: 12px; padding: 14px; margin: 6px 0 4px; background: var(--surface-2); border-radius: 12px; }
 .sub-form h3 { font-size: 1rem; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }

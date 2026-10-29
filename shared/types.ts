@@ -9,6 +9,8 @@ export type Unit = (typeof UNITS)[number];
 export interface Me {
   id: number;
   name: string;
+  /** Devanagari spelling for the Hindi screens; falls back to name. */
+  nameHi: string | null;
   role: Role;
   lang: Lang;
 }
@@ -113,11 +115,14 @@ export interface ActivityItem {
 export interface UserRow {
   id: number;
   name: string;
+  nameHi: string | null;
   role: Role;
   lang: Lang;
   active: boolean;
   lockedUntil: number | null;
   createdAt: number;
+  /** True once the person has recorded or changed anything; such a person can be turned off but not deleted. */
+  hasHistory: boolean;
 }
 
 /** Managers can fix their own mistakes for this long; after that the admin edits. */

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Lang, Me } from '../shared/types.ts';
 import { ApiError, NetworkError, api } from './api.ts';
 import { BigTopBar, LangToggle, Spinner } from './components.tsx';
-import { LangContext, useT } from './i18n.ts';
+import { LangContext, initial, personName, useT } from './i18n.ts';
 
 const LANG_KEY = 'fh_login_lang';
 const LAST_USER_KEY = 'fh_last_user';
@@ -15,7 +15,7 @@ function storedLang(): Lang {
   }
 }
 
-interface LoginUser { id: number; name: string; role: string }
+interface LoginUser { id: number; name: string; nameHi: string | null; role: string }
 
 export function Login({ onSignedIn }: { onSignedIn: (me: Me) => void }) {
   const [lang, setLang] = useState<Lang>(storedLang);
@@ -71,8 +71,8 @@ function LoginInner({ onSignedIn, onToggleLang }: { onSignedIn: (me: Me) => void
           <div className="action-stack">
             {people.map((p) => (
               <button key={p.id} type="button" className="person-btn" onClick={() => setPerson(p)}>
-                <span className="avatar" aria-hidden="true">{p.name.trim().charAt(0).toUpperCase()}</span>
-                {p.name}
+                <span className="avatar" aria-hidden="true">{initial(personName(p, t.lang))}</span>
+                {personName(p, t.lang)}
               </button>
             ))}
           </div>
@@ -123,8 +123,8 @@ function PinPad({ person, onSignedIn }: { person: LoginUser; onSignedIn: (me: Me
   return (
     <div>
       <div className="person-btn" style={{ boxShadow: 'none', marginBottom: 18 }} aria-live="polite">
-        <span className="avatar" aria-hidden="true">{person.name.trim().charAt(0).toUpperCase()}</span>
-        {person.name}
+        <span className="avatar" aria-hidden="true">{initial(personName(person, t.lang))}</span>
+        {personName(person, t.lang)}
       </div>
       <p className="big-sub" style={{ textAlign: 'center', margin: '0 0 6px' }}>{t('enterPin')}</p>
       <div className={`pin-dots ${shake ? 'shake' : ''}`} aria-label={`${pin.length} / 4`}>

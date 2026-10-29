@@ -4,7 +4,7 @@ import { addDays, todayInIndia } from '../shared/season.ts';
 import type { Entry } from '../shared/types.ts';
 import { listEntries } from './api.ts';
 import { BigTopBar, LangToggle, Spinner } from './components.tsx';
-import { categoryName, formatDate, formatWeekday, unitName, useT } from './i18n.ts';
+import { categoryName, formatDate, personName, formatWeekday, unitName, useT } from './i18n.ts';
 import { discard, usePending, type Pending } from './outbox.ts';
 import { usePendingPhotoCounts } from './photoQueue.ts';
 import { navigate } from './router.ts';
@@ -79,7 +79,7 @@ export function ManagerHome() {
   return (
     <div className="big big-shell">
       <BigTopBar right={<LangToggle onToggle={() => setLang(t.lang === 'hi' ? 'en' : 'hi')} />} />
-      <h1 className="big-title" style={{ marginTop: 4 }}>{t('hello')}, {me.name} 🙏</h1>
+      <h1 className="big-title" style={{ marginTop: 4 }}>{t('hello')}, {personName(me, t.lang)} 🙏</h1>
 
       {!online && <p className="banner" role="status">📶 {t('offline')}</p>}
 
