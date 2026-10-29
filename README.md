@@ -1,4 +1,4 @@
-# Farm Ledger
+# FarmHouse
 
 A phone-first app for recording farm expenses and income, with a dashboard for the owner.
 

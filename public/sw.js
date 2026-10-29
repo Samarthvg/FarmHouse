@@ -1,7 +1,7 @@
 // Keeps the app shell available offline. API calls always go to the network;
 // entries saved offline are queued by the app itself, not here.
 
-const CACHE = 'farm-shell-v1';
+const CACHE = 'farm-shell-v2';
 const SHELL = ['/', '/manifest.webmanifest', '/icon.svg', '/icon-192.png'];
 
 self.addEventListener('install', (event) => {

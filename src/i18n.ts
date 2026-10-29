@@ -2,7 +2,7 @@ import { createContext, useContext } from 'react';
 import type { Category, Lang, Unit } from '../shared/types.ts';
 
 const strings = {
-  appName: { hi: 'फ़ार्म हिसाब', en: 'Farm Ledger' },
+  appName: { hi: 'फ़ार्महाउस', en: 'FarmHouse' },
   hello: { hi: 'नमस्ते', en: 'Hello' },
   whoAreYou: { hi: 'आप कौन हैं?', en: 'Who are you?' },
   enterPin: { hi: 'अपना 4 अंकों का PIN डालें', en: 'Enter your 4-digit PIN' },

@@ -1,6 +1,6 @@
 {
-  "name": "Farm Ledger",
-  "short_name": "Farm",
+  "name": "FarmHouse",
+  "short_name": "FarmHouse",
   "description": "Farm expenses and income",
   "start_url": "/",
   "scope": "/",

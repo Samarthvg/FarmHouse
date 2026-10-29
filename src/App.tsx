@@ -82,7 +82,7 @@ function AdminShell({ tab, children }: { tab: (typeof TABS)[number][0]; children
     <div className="admin">
       <header className="admin-header">
         <div className="admin-brand">
-          <span aria-hidden="true">🌱</span> Farm Ledger
+          <span aria-hidden="true">🌱</span> FarmHouse
         </div>
         <nav className="admin-tabs" aria-label="Sections">
           {TABS.map(([key, href, label]) => (
