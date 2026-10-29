@@ -1,6 +1,6 @@
 import type { Context, MiddlewareHandler } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import type { Me } from '../shared/types.ts';
+import { ADMIN_IDLE_MS, type Me } from '../shared/types.ts';
 import type { AppEnv } from './env.ts';
 
 const COOKIE = 'fh_session';
@@ -17,18 +17,21 @@ function randomToken(): string {
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-export async function startSession(c: Context<AppEnv>, userId: number): Promise<void> {
+const lifetime = (role: Me['role']) => (role === 'admin' ? ADMIN_IDLE_MS : SESSION_DAYS * DAY_MS);
+
+export async function startSession(c: Context<AppEnv>, userId: number, role: Me['role']): Promise<void> {
   const token = randomToken();
   const now = Date.now();
   await c.env.DB.prepare('INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)')
-    .bind(await sha256(token), userId, now, now + SESSION_DAYS * DAY_MS)
+    .bind(await sha256(token), userId, now, now + lifetime(role))
     .run();
   setCookie(c, COOKIE, token, {
     httpOnly: true,
     secure: new URL(c.req.url).protocol === 'https:',
     sameSite: 'Lax',
     path: '/',
-    maxAge: SESSION_DAYS * 24 * 60 * 60,
+    // An admin cookie also ends when the browser closes; the server-side idle limit is what enforces it.
+    ...(role === 'admin' ? {} : { maxAge: SESSION_DAYS * 24 * 60 * 60 }),
   });
 }
 
@@ -38,7 +41,10 @@ export async function endSession(c: Context<AppEnv>): Promise<void> {
   deleteCookie(c, COOKIE, { path: '/' });
 }
 
-/** Resolves the signed-in user, sliding the session forward so a phone in daily use never logs out. */
+/**
+ * Resolves the signed-in user and slides the session forward: an entry phone in daily use never logs
+ * out, and an admin session lasts ADMIN_IDLE_MS past its last request.
+ */
 export const requireUser: MiddlewareHandler<AppEnv> = async (c, next) => {
   const token = getCookie(c, COOKIE);
   if (!token) return c.json({ error: 'signed_out' }, 401);
@@ -55,11 +61,13 @@ export const requireUser: MiddlewareHandler<AppEnv> = async (c, next) => {
     deleteCookie(c, COOKIE, { path: '/' });
     return c.json({ error: 'signed_out' }, 401);
   }
-  if (row.expires_at - now < (SESSION_DAYS / 2) * DAY_MS) {
+  const target = now + lifetime(row.role);
+  // Renew at most about once a minute for admins and once every few months for phones. A session
+  // longer than its role allows (one made before the limit existed) is cut back to the limit.
+  const slack = row.role === 'admin' ? 60_000 : (SESSION_DAYS / 2) * DAY_MS;
+  if (row.expires_at < target - slack || row.expires_at > target) {
     c.executionCtx.waitUntil(
-      c.env.DB.prepare('UPDATE sessions SET expires_at = ? WHERE token_hash = ?')
-        .bind(now + SESSION_DAYS * DAY_MS, hash)
-        .run(),
+      c.env.DB.prepare('UPDATE sessions SET expires_at = ? WHERE token_hash = ?').bind(target, hash).run(),
     );
   }
   c.set('user', { id: row.id, name: row.name, role: row.role, lang: row.lang });

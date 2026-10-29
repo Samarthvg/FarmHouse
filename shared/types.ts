@@ -124,6 +124,11 @@ export interface UserRow {
 export const MANAGER_EDIT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 /** How far back a manager may date a new entry. */
 export const MANAGER_BACKDATE_DAYS = 60;
+/**
+ * The admin sees every rupee and every setting, so an unattended admin sign-in ends after this much
+ * inactivity. The entry-only role keeps the long session: it lives on her own phone and only records.
+ */
+export const ADMIN_IDLE_MS = 30 * 60 * 1000;
 export const MAX_PHOTOS_PER_ENTRY = 4;
 export const MAX_PHOTO_BYTES = 4 * 1024 * 1024;
 

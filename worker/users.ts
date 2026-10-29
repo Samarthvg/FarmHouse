@@ -62,7 +62,7 @@ session.post('/login', async (c) => {
   }
 
   await db.prepare('UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = ?').bind(user.id).run();
-  await startSession(c, user.id);
+  await startSession(c, user.id, user.role);
   return c.json({ id: user.id, name: user.name, role: user.role, lang: user.lang });
 });
 

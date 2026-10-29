@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { Category, Lang, Me } from '../shared/types.ts';
+import { ADMIN_IDLE_MS, type Category, type Lang, type Me } from '../shared/types.ts';
 import { api, getCategories, getMe, onSignedOut } from './api.ts';
 import { LangContext } from './i18n.ts';
 import { flush } from './outbox.ts';
@@ -65,7 +65,8 @@ export function SessionProvider({ signedOut, loading, children }: {
       setState({ status: 'ready', me, categories });
     } catch (err) {
       const cached = readCache();
-      if ((err as { status?: number }).status === 401 || !cached) {
+      // Only the entry phone opens from the cache with no signal; an admin always signs in fresh.
+      if ((err as { status?: number }).status === 401 || !cached || cached.me.role === 'admin') {
         writeCache(null);
         setState({ status: 'signed_out' });
       } else {
@@ -95,6 +96,16 @@ export function SessionProvider({ signedOut, loading, children }: {
       clearInterval(timer);
     };
   }, [meId, bumpData]);
+
+  const isAdmin = state.status === 'ready' && state.me.role === 'admin';
+  useEffect(() => {
+    if (!isAdmin) return;
+    return watchAdminIdle(() => {
+      api('/logout', { method: 'POST' }).catch(() => {});
+      writeCache(null);
+      setState({ status: 'signed_out' });
+    });
+  }, [isAdmin]);
 
   const value = useMemo<SessionValue | null>(() => {
     if (state.status !== 'ready') return null;
@@ -137,4 +148,38 @@ export function SessionProvider({ signedOut, loading, children }: {
       <LangContext.Provider value={value.me.lang}>{children}</LangContext.Provider>
     </SessionContext.Provider>
   );
+}
+
+const KEEPALIVE_MS = 2 * 60 * 1000;
+
+/**
+ * Signs an admin out after ADMIN_IDLE_MS with no taps or keys, so figures never sit open on an
+ * unattended screen. While someone is reading without making requests, a light /me call every few
+ * minutes keeps the server's matching idle limit from ending the session under them.
+ */
+function watchAdminIdle(onIdle: () => void): () => void {
+  let lastActive = Date.now();
+  let lastPing = Date.now();
+  const activity = () => {
+    // The first tap after a long sleep must not count as activity and revive the session.
+    if (Date.now() - lastActive >= ADMIN_IDLE_MS) return onIdle();
+    lastActive = Date.now();
+    if (lastActive - lastPing > KEEPALIVE_MS) {
+      lastPing = lastActive;
+      api('/me').catch(() => {});
+    }
+  };
+  // Timers pause in background tabs and on sleeping laptops, so compare wall-clock time on every check.
+  const check = () => {
+    if (Date.now() - lastActive >= ADMIN_IDLE_MS) onIdle();
+  };
+  const events = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
+  events.forEach((e) => window.addEventListener(e, activity, { passive: true }));
+  document.addEventListener('visibilitychange', check);
+  const timer = setInterval(check, 15_000);
+  return () => {
+    events.forEach((e) => window.removeEventListener(e, activity));
+    document.removeEventListener('visibilitychange', check);
+    clearInterval(timer);
+  };
 }
