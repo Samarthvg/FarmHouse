@@ -1,28 +1,16 @@
-:root {
-  --chart-expense: #e0904a;
-  --chart-income: #00846c;
-  --chart-prev: #b9b2a2;
-  --grid: #ebe6da;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --chart-expense: #c97a36;
-    --chart-income: #00846c;
-    --chart-prev: #55513f;
-    --grid: #2f2c23;
-  }
-}
-
 .admin { min-height: 100dvh; }
 .admin-header {
   position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
   padding: 10px 24px; background: var(--surface); border-bottom: 1px solid var(--border);
 }
-.admin-brand { font-weight: 800; font-size: 1.1rem; white-space: nowrap; }
+.admin-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; white-space: nowrap; letter-spacing: -0.01em; }
+.admin-brand img { border-radius: 7px; }
+.theme-cycle svg { flex: none; }
 .admin-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
 .admin-tabs a {
   padding: 8px 14px; border-radius: 10px; color: var(--text-2); text-decoration: none; font-weight: 600; white-space: nowrap;
 }
+.admin-tabs a:hover { color: var(--text); background: var(--surface-2); }
 .admin-tabs a.on { background: var(--accent-soft); color: var(--accent); }
 .admin-user { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 .admin-add { display: flex; gap: 8px; flex-wrap: wrap; max-width: 1180px; margin: 16px auto 0; padding: 0 24px; }
@@ -36,7 +24,7 @@
 
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .season-picker { display: flex; align-items: center; gap: 12px; }
-.season-name { font-weight: 800; font-size: 1.35rem; line-height: 1.1; }
+.season-name { font-weight: 700; font-size: 1.35rem; line-height: 1.1; }
 .season-range { font-size: 0.85rem; }
 .banner-btn { border: none; width: 100%; text-align: left; font: inherit; font-weight: 600; }
 
@@ -73,7 +61,7 @@ button.stat:hover { border-color: var(--text-3); }
 .tooltip {
   position: absolute; top: 0; transform: translateX(-50%); pointer-events: none; z-index: 2;
   background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px;
-  box-shadow: 0 6px 24px rgb(0 0 0 / 0.14); font-size: 0.85rem; min-width: 170px; white-space: nowrap;
+  box-shadow: var(--shadow-lg); font-size: 0.85rem; min-width: 170px; white-space: nowrap;
 }
 .tt-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--text-2); }
 .tt-row b { margin-left: auto; color: var(--text); padding-left: 12px; }
@@ -98,7 +86,7 @@ button.stat:hover { border-color: var(--text-3); }
 .data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 .data-table tbody tr { cursor: pointer; }
 .data-table tbody tr:hover { background: var(--surface-2); }
-.data-table tfoot td { font-weight: 800; border-bottom: none; border-top: 2px solid var(--border); }
+.data-table tfoot td { font-weight: 700; border-bottom: none; border-top: 2px solid var(--border); }
 .row-empty td { color: var(--text-3); }
 
 .filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 16px; }
@@ -123,7 +111,7 @@ button.stat:hover { border-color: var(--text-3); }
 .entry-note { color: var(--text-2); font-size: 0.9rem; white-space: pre-line; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .entry-meta { color: var(--text-3); font-size: 0.82rem; }
 .entry-review { justify-self: start; white-space: normal; margin-top: 4px; }
-.entry-amt { font-weight: 800; flex: none; white-space: nowrap; }
+.entry-amt { font-weight: 700; flex: none; white-space: nowrap; }
 .entry-actions { display: flex; gap: 8px; padding: 0 16px 12px 60px; }
 .is-deleted { opacity: 0.6; }
 .is-deleted .entry-amt { text-decoration: line-through; }
@@ -146,6 +134,7 @@ button.stat:hover { border-color: var(--text-3); }
 }
 @media (max-width: 640px) {
   .admin-header { padding: 8px 16px; gap: 8px; }
+  .theme-cycle span, .admin-name { display: none; }
   .admin-tabs { order: 3; width: 100%; margin: 0 -16px; padding: 0 12px; width: calc(100% + 32px); }
   .admin-add, .admin-main { padding-left: 16px; padding-right: 16px; }
   .hero { grid-template-columns: 1fr; padding: 18px; gap: 16px; }

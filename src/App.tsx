@@ -5,7 +5,7 @@ import { Activity } from './admin/Activity.tsx';
 import { Dashboard } from './admin/Dashboard.tsx';
 import { Entries } from './admin/Entries.tsx';
 import { Settings } from './admin/Settings.tsx';
-import { BigTopBar, FullScreenSpinner } from './components.tsx';
+import { BigTopBar, FullScreenSpinner, ThemeCycle } from './components.tsx';
 import { EntryWizard } from './EntryWizard.tsx';
 import { useT } from './i18n.ts';
 import { Login } from './Login.tsx';
@@ -82,7 +82,7 @@ function AdminShell({ tab, children }: { tab: (typeof TABS)[number][0]; children
     <div className="admin">
       <header className="admin-header">
         <div className="admin-brand">
-          <span aria-hidden="true">🌱</span> FarmHouse
+          <img src="/icon.svg" width="26" height="26" alt="" /> FarmHouse
         </div>
         <nav className="admin-tabs" aria-label="Sections">
           {TABS.map(([key, href, label]) => (
@@ -93,7 +93,8 @@ function AdminShell({ tab, children }: { tab: (typeof TABS)[number][0]; children
           ))}
         </nav>
         <div className="admin-user">
-          <span className="muted">{me.name}</span>
+          <ThemeCycle />
+          <span className="muted admin-name">{me.name}</span>
           <button type="button" className="btn btn-sm btn-ghost" onClick={signOut}>Sign out</button>
         </div>
       </header>

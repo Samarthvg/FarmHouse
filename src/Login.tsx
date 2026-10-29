@@ -54,7 +54,7 @@ function LoginInner({ onSignedIn, onToggleLang }: { onSignedIn: (me: Me) => void
   return (
     <div className="big big-shell">
       <BigTopBar onBack={person && people && people.length > 1 ? () => setPerson(null) : undefined} right={<LangToggle onToggle={onToggleLang} />} />
-      <div style={{ textAlign: 'center', margin: '8px 0 4px', fontSize: '3rem' }} aria-hidden="true">🌱</div>
+      <img className="brand-mark" src="/icon.svg" width="64" height="64" alt="" />
       <h1 className="big-title" style={{ textAlign: 'center', marginTop: 0 }}>{t('appName')}</h1>
       {loadError ? (
         <div style={{ textAlign: 'center' }}>

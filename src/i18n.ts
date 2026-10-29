@@ -75,6 +75,8 @@ const strings = {
   amountMissing: { hi: 'पहले रकम डालें', en: 'Enter an amount first' },
   monthOnly: { hi: 'पूरा महीना', en: 'whole month' },
   language: { hi: 'English', en: 'हिंदी' },
+  darkMode: { hi: 'गहरा रंग', en: 'Dark mode' },
+  lightMode: { hi: 'हल्का रंग', en: 'Light mode' },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type StringKey = keyof typeof strings;
