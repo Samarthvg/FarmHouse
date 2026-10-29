@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.log
+
+# Real farm records stay out of the repo.
+data/
+
+# Local agent config
+CLAUDE.md
+.claude/
