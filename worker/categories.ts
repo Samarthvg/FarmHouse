@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { UNITS, type Category } from '../shared/types.ts';
+import { UNITS, type Category, type Kind } from '../shared/types.ts';
 import { requireAdmin } from './auth.ts';
 import type { AppEnv } from './env.ts';
 
@@ -50,6 +50,10 @@ const createSchema = fields.partial({ icon: true, sort: true, showOnEntry: true,
   .extend({ kind: z.enum(['expense', 'income', 'capital']) });
 const updateSchema = fields.partial();
 
+/** A tile without a picture is hard to spot on the big entry screen, so a blank icon gets one by kind. */
+const DEFAULT_ICON: Record<Kind, string> = { expense: '🧾', income: '💰', capital: '🏦' };
+const iconOrDefault = (icon: string | undefined, kind: Kind) => icon?.trim() || DEFAULT_ICON[kind];
+
 export const categories = new Hono<AppEnv>();
 
 categories.get('/', async (c) => {
@@ -67,7 +71,7 @@ categories.post('/', requireAdmin, async (c) => {
       `INSERT INTO categories (kind, name_en, name_hi, icon, sort, show_on_entry, tracks_workers, unit, active)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
     )
-      .bind(p.kind, p.nameEn, p.nameHi, p.icon ?? '', p.sort ?? 100, p.showOnEntry === false ? 0 : 1,
+      .bind(p.kind, p.nameEn, p.nameHi, iconOrDefault(p.icon, p.kind), p.sort ?? 100, p.showOnEntry === false ? 0 : 1,
         p.tracksWorkers ? 1 : 0, p.unit ?? null, p.active === false ? 0 : 1)
       .first<CategoryRow>();
     return c.json(toCategory(row!), 201);
@@ -88,7 +92,7 @@ categories.patch('/:id', requireAdmin, async (c) => {
       `UPDATE categories SET name_en = ?, name_hi = ?, icon = ?, sort = ?, show_on_entry = ?, tracks_workers = ?, unit = ?, active = ?
         WHERE id = ?`,
     )
-      .bind(n.nameEn, n.nameHi, n.icon, n.sort, n.showOnEntry ? 1 : 0, n.tracksWorkers ? 1 : 0, n.unit, n.active ? 1 : 0, n.id)
+      .bind(n.nameEn, n.nameHi, iconOrDefault(n.icon, n.kind), n.sort, n.showOnEntry ? 1 : 0, n.tracksWorkers ? 1 : 0, n.unit, n.active ? 1 : 0, n.id)
       .run();
   } catch (err) {
     if (String(err).includes('UNIQUE')) return c.json({ error: 'duplicate_name' }, 409);

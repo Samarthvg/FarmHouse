@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react';
+import { toDevanagari } from '../shared/devanagari.ts';
 import type { Category, Lang, Unit } from '../shared/types.ts';
 
 const strings = {
@@ -99,8 +100,9 @@ export function unitName(unit: Unit, lang: Lang): string {
   return UNIT_NAMES[unit][lang];
 }
 
-export function personName(p: { name: string; nameHi?: string | null }, lang: Lang): string {
-  return lang === 'hi' && p.nameHi ? p.nameHi : p.name;
+/** People's names are typed in English letters; the Hindi screens show them spelled in Hindi. */
+export function personName(p: { name: string }, lang: Lang): string {
+  return lang === 'hi' ? toDevanagari(p.name) : p.name;
 }
 
 /** First letter for an avatar; whole code points, so a Devanagari name is never cut mid-letter. */

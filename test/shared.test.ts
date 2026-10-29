@@ -3,6 +3,7 @@ import { formatRupees, parseAmountExpression } from '../shared/money.ts';
 import { hashPin, isValidPin, verifyPin } from '../shared/pin.ts';
 import { addDays, isValidIsoDate, season, seasonOf, todayInIndia } from '../shared/season.ts';
 import { lockDurationMs } from '../shared/lockout.ts';
+import { toDevanagari } from '../shared/devanagari.ts';
 
 describe('parseAmountExpression', () => {
   it('reads plain and formatted amounts', () => {
@@ -77,5 +78,19 @@ describe('lockDurationMs', () => {
     expect(lockDurationMs(6)).toBe(0);
     expect(lockDurationMs(10)).toBe(30 * 60_000);
     expect(lockDurationMs(100)).toBe(24 * 60 * 60_000);
+  });
+});
+
+describe('toDevanagari', () => {
+  it('spells common names the way they are written in Hindi', () => {
+    const cases: [string, string][] = [
+      ['Samarth', 'समर्थ'], ['Vikas', 'विकास'], ['Sanjay', 'संजय'], ['Lakshmi', 'लक्ष्मी'], ['Pooja', 'पूजा'],
+      ['Ramesh Kumar', 'रमेश कुमार'], ['Mohan Lal', 'मोहन लाल'], ['Neelam', 'नीलम'], ['Kamla Devi', 'कम्ला देवी'],
+      ['Promila Madam', 'प्रोमिला मैडम'], ['Rajinder Singh', 'रजिंदेर सिंह'],
+    ];
+    for (const [latin, hindi] of cases) expect(toDevanagari(latin)).toBe(hindi);
+  });
+  it('leaves a name already in Hindi alone', () => {
+    expect(toDevanagari('समर्थ')).toBe('समर्थ');
   });
 });

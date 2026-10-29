@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Lang, Me } from '../shared/types.ts';
 import { ApiError, NetworkError, api } from './api.ts';
-import { BigTopBar, LangToggle, Spinner } from './components.tsx';
+import { BigTopBar, LangToggle, Spinner, useDigitKeys } from './components.tsx';
 import { LangContext, initial, personName, useT } from './i18n.ts';
 
 const LANG_KEY = 'fh_login_lang';
@@ -15,7 +15,7 @@ function storedLang(): Lang {
   }
 }
 
-interface LoginUser { id: number; name: string; nameHi: string | null; role: string }
+interface LoginUser { id: number; name: string; role: string }
 
 export function Login({ onSignedIn }: { onSignedIn: (me: Me) => void }) {
   const [lang, setLang] = useState<Lang>(storedLang);
@@ -119,6 +119,8 @@ function PinPad({ person, onSignedIn }: { person: LoginUser; onSignedIn: (me: Me
     setPin(next);
     if (next.length === 4) submit(next);
   };
+  // The PIN sends itself at the fourth digit, so Enter has nothing to do.
+  useDigitKeys({ onDigit: press, onDelete: () => press('⌫'), onEnter: () => {} });
 
   return (
     <div>

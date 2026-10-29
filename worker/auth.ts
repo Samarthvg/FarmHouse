@@ -51,12 +51,12 @@ export const requireUser: MiddlewareHandler<AppEnv> = async (c, next) => {
   const hash = await sha256(token);
   const now = Date.now();
   const row = await c.env.DB.prepare(
-    `SELECT u.id, u.name, u.name_hi, u.role, u.lang, s.expires_at
+    `SELECT u.id, u.name, u.role, u.lang, s.expires_at
        FROM sessions s JOIN users u ON u.id = s.user_id
       WHERE s.token_hash = ? AND s.expires_at > ? AND u.active = 1`,
   )
     .bind(hash, now)
-    .first<{ id: number; name: string; name_hi: string | null; role: Me['role']; lang: Me['lang']; expires_at: number }>();
+    .first<{ id: number; name: string; role: Me['role']; lang: Me['lang']; expires_at: number }>();
   if (!row) {
     deleteCookie(c, COOKIE, { path: '/' });
     return c.json({ error: 'signed_out' }, 401);
@@ -70,7 +70,7 @@ export const requireUser: MiddlewareHandler<AppEnv> = async (c, next) => {
       c.env.DB.prepare('UPDATE sessions SET expires_at = ? WHERE token_hash = ?').bind(target, hash).run(),
     );
   }
-  c.set('user', { id: row.id, name: row.name, nameHi: row.name_hi, role: row.role, lang: row.lang });
+  c.set('user', { id: row.id, name: row.name, role: row.role, lang: row.lang });
   await next();
 };
 

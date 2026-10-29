@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { formatRupees } from '../shared/money.ts';
 import type { Kind } from '../shared/types.ts';
 import { useT } from './i18n.ts';
@@ -105,4 +105,37 @@ export function Spinner() {
 
 export function FullScreenSpinner() {
   return <div className="center-screen"><Spinner /></div>;
+}
+
+export interface DigitKeys {
+  onDigit: (d: string) => void;
+  onDelete: () => void;
+  onPlus?: () => void;
+  onEnter?: () => void;
+}
+
+/**
+ * Lets a laptop or a phone with a keyboard type into an on-screen number pad: digits (top row or
+ * numpad), Backspace, + and Enter. Keys typed into a real text box are left alone.
+ */
+export function useDigitKeys(keys: DigitKeys) {
+  const latest = useRef(keys);
+  latest.current = keys;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
+      const el = e.target as HTMLElement | null;
+      if (el?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      const k = latest.current;
+      if (/^[0-9]$/.test(e.key)) k.onDigit(e.key);
+      else if (e.key === 'Backspace') k.onDelete();
+      else if (e.key === '+' && k.onPlus) k.onPlus();
+      // Enter would otherwise also press whichever pad key still has focus from the last tap.
+      else if (e.key === 'Enter' && k.onEnter) k.onEnter();
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 }

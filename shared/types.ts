@@ -9,8 +9,6 @@ export type Unit = (typeof UNITS)[number];
 export interface Me {
   id: number;
   name: string;
-  /** Devanagari spelling for the Hindi screens; falls back to name. */
-  nameHi: string | null;
   role: Role;
   lang: Lang;
 }
@@ -115,7 +113,6 @@ export interface ActivityItem {
 export interface UserRow {
   id: number;
   name: string;
-  nameHi: string | null;
   role: Role;
   lang: Lang;
   active: boolean;

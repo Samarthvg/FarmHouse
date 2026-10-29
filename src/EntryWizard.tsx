@@ -3,7 +3,7 @@ import { formatRupees, parseAmountExpression } from '../shared/money.ts';
 import { addDays, todayInIndia } from '../shared/season.ts';
 import { MANAGER_BACKDATE_DAYS, MAX_PHOTOS_PER_ENTRY, type Entry, type Kind, type NewEntry } from '../shared/types.ts';
 import { ApiError, NetworkError, createEntry, deleteEntry, deletePhoto, newId, photoUrl, updateEntry } from './api.ts';
-import { BigTopBar, CheckIcon, LangToggle } from './components.tsx';
+import { BigTopBar, CheckIcon, LangToggle, useDigitKeys } from './components.tsx';
 import { categoryName, formatDate, formatWeekday, unitName, useT, type StringKey } from './i18n.ts';
 import { shrinkImage } from './images.ts';
 import { enqueue } from './outbox.ts';
@@ -279,7 +279,11 @@ export function EntryWizard(props: { kind: Kind } | { entry: Entry }) {
         <h1 className="big-title">
           <span aria-hidden="true">{category?.icon} </span>{categoryName(category, t.lang)} — {t('howMuch')}
         </h1>
-        <AmountPad expr={draft.expr} onChange={(expr) => setDraft((d) => ({ ...d, expr }))} />
+        <AmountPad
+          expr={draft.expr}
+          onChange={(expr) => setDraft((d) => ({ ...d, expr }))}
+          onEnter={() => { if (amountPaise) goTo(editing ? 'review' : afterAmount()); }}
+        />
         <button
           type="button"
           className="big-next"
@@ -333,6 +337,7 @@ export function EntryWizard(props: { kind: Kind } | { entry: Entry }) {
         <DigitPad
           onDigit={(d) => setDraft((x) => (x.quantity.length >= 7 || (x.quantity === '' && d === '0') ? x : { ...x, quantity: x.quantity + d }))}
           onDelete={() => setDraft((x) => ({ ...x, quantity: x.quantity.slice(0, -1) }))}
+          onEnter={() => { if (quantity) goTo('review'); }}
         />
         <button type="button" className="big-next" disabled={!quantity} onClick={() => goTo('review')}>{t('next')} →</button>
         <button type="button" className="big-secondary" onClick={() => { setDraft((d) => ({ ...d, quantity: '' })); goTo('review'); }}>
@@ -491,7 +496,14 @@ function SummaryRow({ emoji, label, value, onChange }: { emoji: string; label: s
 }
 
 /** 1–9, then [extra] 0 ⌫. The extra key is + for amounts and left blank for quantities. */
-function DigitPad({ onDigit, onDelete, extra }: { onDigit: (d: string) => void; onDelete: () => void; extra?: ReactNode }) {
+function DigitPad({ onDigit, onDelete, onPlus, onEnter, extra }: {
+  onDigit: (d: string) => void;
+  onDelete: () => void;
+  onPlus?: () => void;
+  onEnter: () => void;
+  extra?: ReactNode;
+}) {
+  useDigitKeys({ onDigit, onDelete, onPlus, onEnter });
   return (
     <div className="keypad">
       {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => (
@@ -504,7 +516,7 @@ function DigitPad({ onDigit, onDelete, extra }: { onDigit: (d: string) => void; 
   );
 }
 
-function AmountPad({ expr, onChange }: { expr: string; onChange: (s: string) => void }) {
+function AmountPad({ expr, onChange, onEnter }: { expr: string; onChange: (s: string) => void; onEnter: () => void }) {
   const t = useT();
   const digit = (k: string) => {
     const lastTerm = expr.split('+').pop() ?? '';
@@ -538,6 +550,8 @@ function AmountPad({ expr, onChange }: { expr: string; onChange: (s: string) => 
       <DigitPad
         onDigit={digit}
         onDelete={() => onChange(expr.slice(0, -1))}
+        onPlus={plus}
+        onEnter={onEnter}
         extra={<button type="button" className="key key-alt" onClick={plus} aria-label="plus">+</button>}
       />
     </>

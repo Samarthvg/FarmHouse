@@ -20,7 +20,6 @@ function People() {
   const [msg, setMsg] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [pinFor, setPinFor] = useState<number | null>(null);
-  const [namesFor, setNamesFor] = useState<number | null>(null);
 
   const load = () => api<UserRow[]>('/users').then(setUsers).catch(() => setMsg('Could not load people.'));
   useEffect(() => { load(); }, []);
@@ -31,7 +30,6 @@ function People() {
       await api(`/users/${id}`, { method: 'PATCH', json: body });
       setMsg(done);
       setPinFor(null);
-      setNamesFor(null);
       load();
     } catch (err) {
       setMsg(err instanceof ApiError ? `Could not save (${err.code}).` : 'Could not save.');
@@ -70,7 +68,6 @@ function People() {
             <div key={u.id} className={`settings-row ${u.active ? '' : 'is-deleted'}`}>
               <div className="settings-main">
                 <strong>{u.name}</strong>
-                {u.nameHi && <span lang="hi">{u.nameHi}</span>}
                 <span className="pill">{u.role === 'admin' ? 'Admin' : 'User'}</span>
                 <span className="faint">{u.lang === 'hi' ? 'Hindi' : 'English'}</span>
                 {!u.active && <span className="pill pill-expense">Turned off</span>}
@@ -78,8 +75,7 @@ function People() {
               </div>
               <div className="settings-actions">
                 {u.lockedUntil && <button type="button" className="btn btn-sm" onClick={() => patch(u.id, { unlock: true }, `${u.name} can sign in again.`)}>Unlock</button>}
-                <button type="button" className="btn btn-sm" onClick={() => { setNamesFor(namesFor === u.id ? null : u.id); setPinFor(null); }}>Edit name</button>
-                <button type="button" className="btn btn-sm" onClick={() => { setPinFor(pinFor === u.id ? null : u.id); setNamesFor(null); }}>New PIN</button>
+                <button type="button" className="btn btn-sm" onClick={() => setPinFor(pinFor === u.id ? null : u.id)}>New PIN</button>
                 <button type="button" className="btn btn-sm" onClick={() => patch(u.id, { lang: u.lang === 'hi' ? 'en' : 'hi' }, 'Language changed.')}>
                   Use {u.lang === 'hi' ? 'English' : 'Hindi'}
                 </button>
@@ -92,7 +88,6 @@ function People() {
                   <button type="button" className="btn btn-sm btn-danger" onClick={() => remove(u)}>Delete</button>
                 )}
               </div>
-              {namesFor === u.id && <NamesForm user={u} onSubmit={(names) => patch(u.id, names, 'Name saved.')} />}
               {pinFor === u.id && <PinForm onSubmit={(pin) => patch(u.id, { pin }, `New PIN set for ${u.name}.`)} />}
             </div>
           ))}
@@ -100,18 +95,6 @@ function People() {
       )}
       {adding && <AddPerson onDone={(m) => { setAdding(false); if (m) { setMsg(m); load(); } }} />}
     </section>
-  );
-}
-
-function NamesForm({ user, onSubmit }: { user: UserRow; onSubmit: (names: { name: string; nameHi: string }) => void }) {
-  const [name, setName] = useState(user.name);
-  const [nameHi, setNameHi] = useState(user.nameHi ?? '');
-  return (
-    <form className="inline-form" onSubmit={(e) => { e.preventDefault(); if (name.trim()) onSubmit({ name: name.trim(), nameHi: nameHi.trim() }); }}>
-      <input className="input" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} required aria-label="Name in English" placeholder="English" autoFocus />
-      <input className="input" lang="hi" value={nameHi} onChange={(e) => setNameHi(e.target.value)} maxLength={40} aria-label="Name in Hindi" placeholder="हिंदी (optional)" />
-      <button type="submit" className="btn btn-sm btn-primary" disabled={!name.trim()}>Save</button>
-    </form>
   );
 }
 
@@ -128,7 +111,6 @@ function PinForm({ onSubmit }: { onSubmit: (pin: string) => void }) {
 
 function AddPerson({ onDone }: { onDone: (msg: string | null) => void }) {
   const [name, setName] = useState('');
-  const [nameHi, setNameHi] = useState('');
   const [role, setRole] = useState<'manager' | 'admin'>('manager');
   const [lang, setLang] = useState<'hi' | 'en'>('hi');
   const [pin, setPin] = useState('');
@@ -136,7 +118,7 @@ function AddPerson({ onDone }: { onDone: (msg: string | null) => void }) {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      await api('/users', { method: 'POST', json: { name: name.trim(), nameHi: nameHi.trim(), role, lang, pin } });
+      await api('/users', { method: 'POST', json: { name: name.trim(), role, lang, pin } });
       onDone(`${name.trim()} added. Tell them their PIN.`);
     } catch {
       setErr('Could not add this person.');
@@ -146,8 +128,7 @@ function AddPerson({ onDone }: { onDone: (msg: string | null) => void }) {
     <form className="sub-form" onSubmit={submit}>
       <h3>Add person</h3>
       <div className="form-grid">
-        <label className="field"><span>Name in English</span><input className="input" value={name} onChange={(e) => setName(e.target.value)} required maxLength={40} autoFocus /></label>
-        <label className="field"><span>Name in Hindi (optional, shown on Hindi screens)</span><input className="input" lang="hi" value={nameHi} onChange={(e) => setNameHi(e.target.value)} maxLength={40} placeholder="जैसे: सरला" /></label>
+        <label className="field"><span>Name (shown on the sign-in screen)</span><input className="input" value={name} onChange={(e) => setName(e.target.value)} required maxLength={40} autoFocus /></label>
         <label className="field"><span>Role</span>
           <select className="select" value={role} onChange={(e) => setRole(e.target.value as 'manager' | 'admin')}>
             <option value="manager">User (adds entries, sees only their own)</option>
@@ -254,7 +235,7 @@ function CategoryForm({ category, onDone }: { category?: Category; onDone: (chan
         )}
         <label className="field"><span>English name</span><input className="input" value={v.nameEn} onChange={(e) => setV({ ...v, nameEn: e.target.value })} required maxLength={60} /></label>
         <label className="field"><span>Hindi name</span><input className="input" lang="hi" value={v.nameHi} onChange={(e) => setV({ ...v, nameHi: e.target.value })} required maxLength={60} /></label>
-        <label className="field"><span>Icon (one emoji)</span><input className="input" value={v.icon} onChange={(e) => setV({ ...v, icon: e.target.value })} maxLength={16} /></label>
+        <label className="field"><span>Icon (one emoji; left blank, a default is used)</span><input className="input" value={v.icon} onChange={(e) => setV({ ...v, icon: e.target.value })} maxLength={16} /></label>
         <label className="field"><span>Ask for quantity sold</span>
           <select className="select" value={v.unit ?? ''} onChange={(e) => setV({ ...v, unit: (e.target.value || null) as Unit | null })}>
             <option value="">No</option>

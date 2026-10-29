@@ -9,7 +9,6 @@ import type { AppEnv } from './env.ts';
 interface DbUser {
   id: number;
   name: string;
-  name_hi: string | null;
   role: UserRow['role'];
   lang: UserRow['lang'];
   pin_hash: string;
@@ -31,7 +30,6 @@ const HAS_HISTORY = `(
 const toUserRow = (u: DbUser): UserRow => ({
   id: u.id,
   name: u.name,
-  nameHi: u.name_hi,
   role: u.role,
   lang: u.lang,
   active: u.active === 1,
@@ -41,17 +39,15 @@ const toUserRow = (u: DbUser): UserRow => ({
 });
 
 const pin = z.string().refine(isValidPin, 'PIN must be 4 digits');
-/** Optional Hindi spelling; an empty box clears it. */
-const nameHi = z.string().trim().max(40).nullable().transform((v) => v || null);
 
 export const session = new Hono<AppEnv>();
 
 /** Names shown on the sign-in screen, so nobody has to type a username. */
 session.get('/login-users', async (c) => {
   const { results } = await c.env.DB.prepare(
-    "SELECT id, name, name_hi, role FROM users WHERE active = 1 ORDER BY role = 'admin', name",
-  ).all<{ id: number; name: string; name_hi: string | null; role: string }>();
-  return c.json(results.map((u) => ({ id: u.id, name: u.name, nameHi: u.name_hi, role: u.role })));
+    "SELECT id, name, role FROM users WHERE active = 1 ORDER BY role = 'admin', name",
+  ).all<{ id: number; name: string; role: string }>();
+  return c.json(results);
 });
 
 session.post('/login', async (c) => {
@@ -77,7 +73,7 @@ session.post('/login', async (c) => {
 
   await db.prepare('UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = ?').bind(user.id).run();
   await startSession(c, user.id, user.role);
-  return c.json({ id: user.id, name: user.name, nameHi: user.name_hi, role: user.role, lang: user.lang });
+  return c.json({ id: user.id, name: user.name, role: user.role, lang: user.lang });
 });
 
 session.post('/logout', async (c) => {
@@ -107,22 +103,20 @@ users.post('/', async (c) => {
   const parsed = z.object({
     name: z.string().trim().min(1).max(40),
     role: z.enum(['admin', 'manager']),
-    nameHi: nameHi.optional(),
     lang: z.enum(['hi', 'en']).default('hi'),
     pin,
   }).safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: 'invalid', issues: parsed.error.issues }, 400);
   const p = parsed.data;
   const row = await c.env.DB.prepare(
-    'INSERT INTO users (name, name_hi, role, lang, pin_hash, created_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING *, 0 AS has_history',
-  ).bind(p.name, p.nameHi ?? null, p.role, p.lang, await hashPin(p.pin), Date.now()).first<DbUser>();
+    'INSERT INTO users (name, role, lang, pin_hash, created_at) VALUES (?, ?, ?, ?, ?) RETURNING *, 0 AS has_history',
+  ).bind(p.name, p.role, p.lang, await hashPin(p.pin), Date.now()).first<DbUser>();
   return c.json(toUserRow(row!), 201);
 });
 
 users.patch('/:id', async (c) => {
   const parsed = z.object({
     name: z.string().trim().min(1).max(40),
-    nameHi,
     lang: z.enum(['hi', 'en']),
     active: z.boolean(),
     pin,
@@ -138,7 +132,6 @@ users.patch('/:id', async (c) => {
 
   const stmts: D1PreparedStatement[] = [];
   if (p.name !== undefined) stmts.push(db.prepare('UPDATE users SET name = ? WHERE id = ?').bind(p.name, id));
-  if (p.nameHi !== undefined) stmts.push(db.prepare('UPDATE users SET name_hi = ? WHERE id = ?').bind(p.nameHi, id));
   if (p.lang !== undefined) stmts.push(db.prepare('UPDATE users SET lang = ? WHERE id = ?').bind(p.lang, id));
   if (p.active !== undefined) stmts.push(db.prepare('UPDATE users SET active = ? WHERE id = ?').bind(p.active ? 1 : 0, id));
   if (p.unlock || p.pin) {
