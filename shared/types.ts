@@ -3,6 +3,8 @@
 export type Kind = 'expense' | 'income' | 'capital';
 export type Role = 'admin' | 'manager';
 export type Lang = 'hi' | 'en';
+export const UNITS = ['kg', 'litre', 'box', 'crate'] as const;
+export type Unit = (typeof UNITS)[number];
 
 export interface Me {
   id: number;
@@ -20,6 +22,8 @@ export interface Category {
   sort: number;
   showOnEntry: boolean;
   tracksWorkers: boolean;
+  /** When set, entries also ask how much was sold, in whole units. */
+  unit: Unit | null;
   active: boolean;
 }
 
@@ -31,6 +35,7 @@ export interface Entry {
   dateIsMonthOnly: boolean;
   amountPaise: number;
   workers: number | null;
+  quantity: number | null;
   note: string;
   ref: string | null;
   reviewNote: string | null;
@@ -40,8 +45,14 @@ export interface Entry {
   createdAt: number;
   updatedAt: number;
   deletedAt: number | null;
+  photos: PhotoRef[];
   /** Whether the current user may still edit or delete this entry. */
   editable: boolean;
+}
+
+export interface PhotoRef {
+  id: string;
+  bytes: number;
 }
 
 export interface EntryPage {
@@ -55,6 +66,7 @@ export interface NewEntry {
   date: string;
   amountPaise: number;
   workers: number | null;
+  quantity: number | null;
   note: string;
 }
 
@@ -72,7 +84,17 @@ export interface SeasonReport {
   totals: KindTotals;
   monthly: Record<string, KindTotals>;
   previous: { year: number; totals: KindTotals; monthly: Record<string, KindTotals> };
-  categories: { categoryId: number; paise: number; count: number; previousPaise: number }[];
+  categories: {
+    categoryId: number;
+    paise: number;
+    count: number;
+    previousPaise: number;
+    /** Units sold, and the money from only the entries that recorded a quantity, so the rate is fair. */
+    quantity: number;
+    quantityPaise: number;
+    previousQuantity: number;
+    previousQuantityPaise: number;
+  }[];
   labor: { paise: number; workerDays: number; paiseWithCount: number; previousWorkerDays: number };
   reviewCount: number;
   entryCount: number;
@@ -102,3 +124,13 @@ export interface UserRow {
 export const MANAGER_EDIT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 /** How far back a manager may date a new entry. */
 export const MANAGER_BACKDATE_DAYS = 60;
+export const MAX_PHOTOS_PER_ENTRY = 4;
+export const MAX_PHOTO_BYTES = 4 * 1024 * 1024;
+
+export interface BackupInfo {
+  key: string;
+  size: number;
+  uploaded: string;
+  /** Row counts per table; only returned right after a backup runs. */
+  rows?: Record<string, number>;
+}

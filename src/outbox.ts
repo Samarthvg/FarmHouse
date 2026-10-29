@@ -39,6 +39,11 @@ export function enqueue(entry: NewEntry, userId: number) {
   write([...cache.filter((p) => p.id !== entry.id), { ...entry, userId, queuedAt: Date.now() }]);
 }
 
+/** Entries still waiting on this phone; their photos must wait too. */
+export function pendingEntryIds(): Set<string> {
+  return new Set(cache.map((p) => p.id));
+}
+
 export function discard(id: string) {
   write(cache.filter((p) => p.id !== id));
 }

@@ -4,7 +4,7 @@ import { nextMonth, season, seasonOf, todayInIndia } from '../../shared/season.t
 import type { Entry, EntryPage } from '../../shared/types.ts';
 import { api, listEntries, updateEntry } from '../api.ts';
 import { Spinner } from '../components.tsx';
-import { categoryName, formatDate, formatMonth, useT } from '../i18n.ts';
+import { categoryName, formatDate, formatMonth, unitName, useT } from '../i18n.ts';
 import { navigate, useLocation } from '../router.ts';
 import { useSession } from '../session.tsx';
 
@@ -159,6 +159,10 @@ export function Entries() {
                   <span className="entry-title">
                     {categoryName(cat, t.lang)}
                     {e.workers ? <span className="faint"> · {e.workers} workers</span> : null}
+                    {e.quantity && cat?.unit ? (
+                      <span className="faint"> · {e.quantity.toLocaleString('en-IN')} {unitName(cat.unit, 'en')} · {formatRupees(Math.round(e.amountPaise / e.quantity / 100) * 100)}/{unitName(cat.unit, 'en')}</span>
+                    ) : null}
+                    {e.photos.length ? <span className="faint"> · 📷 {e.photos.length}</span> : null}
                   </span>
                   {e.note && <span className="entry-note">{e.note}</span>}
                   <span className="entry-meta">

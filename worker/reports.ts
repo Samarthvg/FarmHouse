@@ -50,7 +50,9 @@ reports.get('/season/:year', async (c) => {
     ).bind(from, to);
   const byCategory = (from: string, to: string) =>
     db.prepare(
-      `SELECT category_id, SUM(amount_paise) AS paise, COUNT(*) AS count
+      `SELECT category_id, SUM(amount_paise) AS paise, COUNT(*) AS count,
+              COALESCE(SUM(quantity), 0) AS quantity,
+              COALESCE(SUM(CASE WHEN quantity IS NOT NULL THEN amount_paise END), 0) AS quantity_paise
          FROM entries WHERE deleted_at IS NULL AND entry_date >= ? AND entry_date < ?
         GROUP BY category_id`,
     ).bind(from, to);
@@ -77,10 +79,9 @@ reports.get('/season/:year', async (c) => {
 
   const current = fold(curMonths.results as unknown as MonthRow[], cur.months);
   const previous = fold(prevMonths.results as unknown as MonthRow[], prev.months);
-  const prevByCat = new Map(
-    (prevCats.results as { category_id: number; paise: number }[]).map((r) => [r.category_id, r.paise]),
-  );
-  const catRows = curCats.results as { category_id: number; paise: number; count: number }[];
+  interface CatRow { category_id: number; paise: number; count: number; quantity: number; quantity_paise: number }
+  const prevByCat = new Map((prevCats.results as unknown as CatRow[]).map((r) => [r.category_id, r]));
+  const catRows = curCats.results as unknown as CatRow[];
   const categoryIds = new Set([...catRows.map((r) => r.category_id), ...prevByCat.keys()]);
   const cl = curLabor.results[0] as { paise: number; worker_days: number; paise_with_count: number };
   const pl = prevLabor.results[0] as { worker_days: number };
@@ -95,7 +96,17 @@ reports.get('/season/:year', async (c) => {
     previous: { year: year - 1, ...previous },
     categories: [...categoryIds].map((id) => {
       const r = catRows.find((x) => x.category_id === id);
-      return { categoryId: id, paise: r?.paise ?? 0, count: r?.count ?? 0, previousPaise: prevByCat.get(id) ?? 0 };
+      const p = prevByCat.get(id);
+      return {
+        categoryId: id,
+        paise: r?.paise ?? 0,
+        count: r?.count ?? 0,
+        previousPaise: p?.paise ?? 0,
+        quantity: r?.quantity ?? 0,
+        quantityPaise: r?.quantity_paise ?? 0,
+        previousQuantity: p?.quantity ?? 0,
+        previousQuantityPaise: p?.quantity_paise ?? 0,
+      };
     }),
     labor: {
       paise: cl.paise,
@@ -152,12 +163,14 @@ reports.get('/export.csv', async (c) => {
 
   c.executionCtx.waitUntil((async () => {
     try {
-      await writer.write(enc.encode('﻿Date,Type,Category,Amount (Rs),Workers,Note,Entered by,Voucher,Needs review\n'));
+      await writer.write(enc.encode('﻿Date,Type,Category,Amount (Rs),Workers,Quantity,Unit,Note,Entered by,Voucher,Photos,Needs review\n'));
       let cursor: [string, string] | null = null;
       for (;;) {
         const res: D1Result<Record<string, string | number | null>> = await db.prepare(
-          `SELECT e.id, e.entry_date, e.date_is_month_only, e.kind, k.name_en, e.amount_paise, e.workers, e.note,
-                  u.name AS by_name, e.ref, e.review_note
+          `SELECT e.id, e.entry_date, e.date_is_month_only, e.kind, k.name_en, e.amount_paise, e.workers,
+                  e.quantity, CASE WHEN e.quantity IS NOT NULL THEN k.unit END AS unit, e.note,
+                  u.name AS by_name, e.ref, e.review_note,
+                  (SELECT COUNT(*) FROM photos p WHERE p.entry_id = e.id AND p.deleted_at IS NULL) AS photo_count
              FROM entries e JOIN categories k ON k.id = e.category_id LEFT JOIN users u ON u.id = e.created_by
             WHERE e.deleted_at IS NULL AND e.entry_date >= ? AND e.entry_date < ?
               ${cursor ? 'AND (e.entry_date, e.id) > (?, ?)' : ''}
@@ -167,8 +180,8 @@ reports.get('/export.csv', async (c) => {
         if (results.length === 0) break;
         const lines = results.map((r) => [
           r.date_is_month_only ? String(r.entry_date).slice(0, 7) : r.entry_date,
-          r.kind, r.name_en, Number(r.amount_paise) / 100, r.workers, r.note, r.by_name ?? 'Spreadsheet import',
-          r.ref, r.review_note,
+          r.kind, r.name_en, Number(r.amount_paise) / 100, r.workers, r.quantity, r.unit, r.note,
+          r.by_name ?? 'Spreadsheet import', r.ref, r.photo_count || null, r.review_note,
         ].map(csvCell).join(','));
         await writer.write(enc.encode(lines.join('\n') + '\n'));
         const last = results[results.length - 1];

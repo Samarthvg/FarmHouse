@@ -3,6 +3,7 @@ import type { Category, Lang, Me } from '../shared/types.ts';
 import { api, getCategories, getMe, onSignedOut } from './api.ts';
 import { LangContext } from './i18n.ts';
 import { flush } from './outbox.ts';
+import { flushPhotos } from './photoQueue.ts';
 
 interface SessionValue {
   me: Me;
@@ -85,7 +86,7 @@ export function SessionProvider({ signedOut, loading, children }: {
   const meId = state.status === 'ready' ? state.me.id : null;
   useEffect(() => {
     if (meId === null) return;
-    const run = () => flush(meId, bumpData);
+    const run = () => flush(meId, bumpData).then(() => flushPhotos(meId, bumpData));
     run();
     window.addEventListener('online', run);
     const timer = setInterval(run, 60_000);

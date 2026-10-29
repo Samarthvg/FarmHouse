@@ -4,8 +4,9 @@ import { addDays, todayInIndia } from '../shared/season.ts';
 import type { Entry } from '../shared/types.ts';
 import { listEntries } from './api.ts';
 import { BigTopBar, LangToggle, Spinner } from './components.tsx';
-import { categoryName, formatDate, formatWeekday, useT } from './i18n.ts';
+import { categoryName, formatDate, formatWeekday, unitName, useT } from './i18n.ts';
 import { discard, usePending, type Pending } from './outbox.ts';
+import { usePendingPhotoCounts } from './photoQueue.ts';
 import { navigate } from './router.ts';
 import { useSession } from './session.tsx';
 
@@ -46,6 +47,7 @@ export function ManagerHome() {
   const { me, categoryById, dataVersion, setLang, signOut } = useSession();
   const online = useOnline();
   const pending = usePending(me.id);
+  const pendingPhotos = usePendingPhotoCounts();
   const [entries, setEntries] = useState<Entry[] | null>(() => readRecent(me.id));
   const [failed, setFailed] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
@@ -119,13 +121,22 @@ export function ManagerHome() {
                 const cat = categoryById.get(e.categoryId);
                 const isPending = !('kind' in e);
                 const kind = cat?.kind ?? 'expense';
-                const sub = [e.workers ? `${e.workers} ${t('workers')}` : '', e.note].filter(Boolean).join(' · ');
+                const photoCount = ('photos' in e ? e.photos.length : 0) + (pendingPhotos.get(e.id) ?? 0);
+                const sub = [
+                  e.workers ? `${e.workers} ${t('workers')}` : '',
+                  e.quantity && cat?.unit ? `${e.quantity.toLocaleString('en-IN')} ${unitName(cat.unit, t.lang)}` : '',
+                  photoCount ? `📷 ${photoCount}` : '',
+                  e.note,
+                ].filter(Boolean).join(' · ');
                 const content = (
                   <>
                     <span className="emoji" aria-hidden="true">{cat?.icon}</span>
                     <div className="main">
                       <div className="title">{categoryName(cat, t.lang)}</div>
                       {sub && <div className="sub">{sub}</div>}
+                      {!isPending && (pendingPhotos.get(e.id) ?? 0) > 0 && (
+                        <span className="pill pill-warn" style={{ marginTop: 4 }}>📷 {t('photoPending')}</span>
+                      )}
                       {isPending && (
                         <span className={`pill ${(e as Pending).error ? 'pill-expense' : 'pill-warn'}`} style={{ marginTop: 4 }}>
                           ⏳ {(e as Pending).error ? t('pendingFailed') : t('pending')}

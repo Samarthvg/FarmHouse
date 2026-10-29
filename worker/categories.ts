@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import type { Category } from '../shared/types.ts';
+import { UNITS, type Category } from '../shared/types.ts';
 import { requireAdmin } from './auth.ts';
 import type { AppEnv } from './env.ts';
 
@@ -13,6 +13,7 @@ interface CategoryRow {
   sort: number;
   show_on_entry: number;
   tracks_workers: number;
+  unit: Category['unit'];
   active: number;
 }
 
@@ -25,6 +26,7 @@ const toCategory = (r: CategoryRow): Category => ({
   sort: r.sort,
   showOnEntry: r.show_on_entry === 1,
   tracksWorkers: r.tracks_workers === 1,
+  unit: r.unit,
   active: r.active === 1,
 });
 
@@ -40,10 +42,11 @@ const fields = z.object({
   sort: z.number().int().min(0).max(10_000),
   showOnEntry: z.boolean(),
   tracksWorkers: z.boolean(),
+  unit: z.enum(UNITS).nullable(),
   active: z.boolean(),
 });
 // Kind is fixed at creation: every entry stores its kind, and moving a category between kinds would orphan that.
-const createSchema = fields.partial({ icon: true, sort: true, showOnEntry: true, tracksWorkers: true, active: true })
+const createSchema = fields.partial({ icon: true, sort: true, showOnEntry: true, tracksWorkers: true, unit: true, active: true })
   .extend({ kind: z.enum(['expense', 'income', 'capital']) });
 const updateSchema = fields.partial();
 
@@ -61,11 +64,11 @@ categories.post('/', requireAdmin, async (c) => {
   const p = parsed.data;
   try {
     const row = await c.env.DB.prepare(
-      `INSERT INTO categories (kind, name_en, name_hi, icon, sort, show_on_entry, tracks_workers, active)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+      `INSERT INTO categories (kind, name_en, name_hi, icon, sort, show_on_entry, tracks_workers, unit, active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
     )
       .bind(p.kind, p.nameEn, p.nameHi, p.icon ?? '', p.sort ?? 100, p.showOnEntry === false ? 0 : 1,
-        p.tracksWorkers ? 1 : 0, p.active === false ? 0 : 1)
+        p.tracksWorkers ? 1 : 0, p.unit ?? null, p.active === false ? 0 : 1)
       .first<CategoryRow>();
     return c.json(toCategory(row!), 201);
   } catch (err) {
@@ -82,10 +85,10 @@ categories.patch('/:id', requireAdmin, async (c) => {
   const n = { ...existing, ...parsed.data };
   try {
     await c.env.DB.prepare(
-      `UPDATE categories SET name_en = ?, name_hi = ?, icon = ?, sort = ?, show_on_entry = ?, tracks_workers = ?, active = ?
+      `UPDATE categories SET name_en = ?, name_hi = ?, icon = ?, sort = ?, show_on_entry = ?, tracks_workers = ?, unit = ?, active = ?
         WHERE id = ?`,
     )
-      .bind(n.nameEn, n.nameHi, n.icon, n.sort, n.showOnEntry ? 1 : 0, n.tracksWorkers ? 1 : 0, n.active ? 1 : 0, n.id)
+      .bind(n.nameEn, n.nameHi, n.icon, n.sort, n.showOnEntry ? 1 : 0, n.tracksWorkers ? 1 : 0, n.unit, n.active ? 1 : 0, n.id)
       .run();
   } catch (err) {
     if (String(err).includes('UNIQUE')) return c.json({ error: 'duplicate_name' }, 409);

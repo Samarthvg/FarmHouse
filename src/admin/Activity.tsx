@@ -51,6 +51,7 @@ export function Activity() {
     if (b.categoryId !== n.categoryId) out.push(`category ${categoryName(categoryById.get(b.categoryId!), 'en')} → ${categoryName(categoryById.get(n.categoryId!), 'en')}`);
     if (b.date !== n.date) out.push(`date ${formatDate(b.date!, 'en')} → ${formatDate(n.date!, 'en')}`);
     if (b.workers !== n.workers) out.push(`workers ${b.workers ?? '—'} → ${n.workers ?? '—'}`);
+    if ((b.quantity ?? null) !== (n.quantity ?? null)) out.push(`quantity ${b.quantity ?? '—'} → ${n.quantity ?? '—'}`);
     if (b.note !== n.note) out.push('note edited');
     if (b.reviewNote !== n.reviewNote) out.push(n.reviewNote ? 'flagged for review' : 'marked as reviewed');
     return out.join(' · ');

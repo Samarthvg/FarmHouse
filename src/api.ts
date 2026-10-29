@@ -46,6 +46,30 @@ export const updateEntry = (id: string, patch: Partial<NewEntry> & { reviewNote?
   api<Entry>(`/entries/${encodeURIComponent(id)}`, { method: 'PATCH', json: patch });
 export const deleteEntry = (id: string) => api<{ ok: true }>(`/entries/${encodeURIComponent(id)}`, { method: 'DELETE' });
 
+export async function uploadPhoto(entryId: string, photoId: string, blob: Blob): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/entries/${encodeURIComponent(entryId)}/photos/${encodeURIComponent(photoId)}`, {
+      method: 'PUT',
+      headers: { 'content-type': blob.type || 'image/jpeg' },
+      body: blob,
+      credentials: 'same-origin',
+    });
+  } catch {
+    throw new NetworkError('network');
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    if (res.status === 401) signedOutListeners.forEach((fn) => fn());
+    throw new ApiError(res.status, body?.error ?? 'error', body);
+  }
+}
+
+export const deletePhoto = (entryId: string, photoId: string) =>
+  api<{ ok: true }>(`/entries/${encodeURIComponent(entryId)}/photos/${encodeURIComponent(photoId)}`, { method: 'DELETE' });
+
+export const photoUrl = (photoId: string) => `/api/photos/${encodeURIComponent(photoId)}`;
+
 export function listEntries(params: Record<string, string | number | undefined>) {
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') q.set(k, String(v));

@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { Category, Lang } from '../shared/types.ts';
+import type { Category, Lang, Unit } from '../shared/types.ts';
 
 const strings = {
   appName: { hi: 'फ़ार्म हिसाब', en: 'Farm Ledger' },
@@ -26,6 +26,16 @@ const strings = {
   howManyWorkers: { hi: 'कितने मज़दूर थे?', en: 'How many workers?' },
   workers: { hi: 'मज़दूर', en: 'workers' },
   skip: { hi: 'छोड़ें', en: 'Skip' },
+  howMuchSold: { hi: 'कितना माल बिका?', en: 'How much was sold?' },
+  howMuchSoldHint: { hi: 'पता न हो तो "छोड़ें" दबाएँ', en: 'Not sure? Press "Skip"' },
+  quantity: { hi: 'मात्रा', en: 'Quantity' },
+  per: { hi: 'प्रति', en: 'per' },
+  photos: { hi: 'बिल / पर्ची की फ़ोटो (ज़रूरी नहीं)', en: 'Photo of bill / slip (optional)' },
+  addPhoto: { hi: 'फ़ोटो जोड़ें', en: 'Add photo' },
+  removePhoto: { hi: 'फ़ोटो हटाएँ', en: 'Remove photo' },
+  photoLimit: { hi: 'ज़्यादा से ज़्यादा 4 फ़ोटो', en: 'Up to 4 photos' },
+  photoPending: { hi: 'फ़ोटो भेजना बाकी', en: 'Photo not sent yet' },
+  photoFailed: { hi: 'फ़ोटो नहीं ली जा सकी। फिर से कोशिश करें।', en: 'Could not use that photo. Try again.' },
   when: { hi: 'कब?', en: 'When?' },
   today: { hi: 'आज', en: 'Today' },
   yesterday: { hi: 'कल', en: 'Yesterday' },
@@ -74,6 +84,17 @@ export const LangContext = createContext<Lang>('hi');
 export function useT() {
   const lang = useContext(LangContext);
   return Object.assign((key: StringKey) => strings[key][lang], { lang });
+}
+
+const UNIT_NAMES: Record<Unit, Record<Lang, string>> = {
+  kg: { hi: 'किलो', en: 'kg' },
+  litre: { hi: 'लीटर', en: 'litre' },
+  box: { hi: 'पेटी', en: 'boxes' },
+  crate: { hi: 'क्रेट', en: 'crates' },
+};
+
+export function unitName(unit: Unit, lang: Lang): string {
+  return UNIT_NAMES[unit][lang];
 }
 
 export function categoryName(c: Category | undefined, lang: Lang): string {

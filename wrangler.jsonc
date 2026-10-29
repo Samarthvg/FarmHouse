@@ -15,5 +15,9 @@
       "migrations_dir": "migrations"
     }
   ],
+  // Bill photos (photos/) and weekly database backups (backups/). Private: only reachable through the API.
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "farmhouse-files" }],
+  // Sunday 02:00 in India.
+  "triggers": { "crons": ["30 20 * * 6"] },
   "observability": { "enabled": true }
 }

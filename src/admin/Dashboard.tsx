@@ -4,7 +4,7 @@ import { nextMonth } from '../../shared/season.ts';
 import type { Kind, SeasonReport } from '../../shared/types.ts';
 import { api } from '../api.ts';
 import { Spinner } from '../components.tsx';
-import { categoryName, formatMonth, useT } from '../i18n.ts';
+import { categoryName, formatMonth, unitName, useT } from '../i18n.ts';
 import { navigate } from '../router.ts';
 import { useSession } from '../session.tsx';
 import { MonthlyColumns, RankedBars } from './Charts.tsx';
@@ -72,6 +72,13 @@ export function Dashboard() {
       .sort((a, b) => b.value - a.value);
 
   const hasPrev = r ? r.previous.totals.expense + r.previous.totals.income > 0 : false;
+
+  // Crops sold by weight. Rates use only the sales that recorded a weight, so a missing weight never skews them.
+  const harvest = (r?.categories ?? [])
+    .map((c) => ({ ...c, cat: categoryById.get(c.categoryId) }))
+    .filter((c) => c.cat?.unit && (c.paise > 0 || c.previousPaise > 0))
+    .sort((a, b) => b.paise - a.paise);
+  const ratePaise = (paise: number, qty: number) => (qty > 0 ? Math.round(paise / qty / 100) * 100 : null);
 
   return (
     <div className="admin-stack">
@@ -211,6 +218,54 @@ export function Dashboard() {
               </table>
             </div>
           </section>
+
+          {harvest.length > 0 && (
+            <section className="card panel">
+              <div className="panel-head">
+                <div>
+                  <h2>Harvest sold</h2>
+                  <p className="muted">Rates count only the sales where a weight was entered.</p>
+                </div>
+              </div>
+              <div className="table-scroll">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Crop</th>
+                      <th className="num">Sold</th>
+                      <th className="num">Earned</th>
+                      <th className="num">Rate</th>
+                      <th className="num">Last season rate</th>
+                      <th className="num">Change</th>
+                      <th className="num">Sales without weight</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {harvest.map((h) => {
+                      const unit = unitName(h.cat!.unit!, 'en');
+                      const rate = ratePaise(h.quantityPaise, h.quantity);
+                      const prevRate = ratePaise(h.previousQuantityPaise, h.previousQuantity);
+                      const change = rate && prevRate ? (rate - prevRate) / prevRate : null;
+                      const unweighed = h.paise - h.quantityPaise;
+                      return (
+                        <tr key={h.categoryId} onClick={() => goEntries({ from: r.from, to: r.to, categoryId: h.categoryId })}>
+                          <td>{h.cat!.icon} {categoryName(h.cat, t.lang)}</td>
+                          <td className="num">{h.quantity ? `${h.quantity.toLocaleString('en-IN')} ${unit}` : '—'}</td>
+                          <td className="num">{formatRupees(h.paise)}</td>
+                          <td className="num">{rate ? `${formatRupees(rate)}/${unit}` : '—'}</td>
+                          <td className="num faint">{prevRate ? `${formatRupees(prevRate)}/${unit}` : '—'}</td>
+                          <td className={`num ${change === null ? 'faint' : change >= 0 ? 'delta-good' : 'delta-bad'}`}>
+                            {change === null ? '—' : `${change > 0 ? '+' : ''}${Math.round(change * 100)}%`}
+                          </td>
+                          <td className="num faint">{unweighed > 0 ? formatRupees(unweighed) : '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
 
           <div className="two-col">
             <section className="card panel">

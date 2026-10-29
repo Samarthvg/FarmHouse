@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import type { Category, Kind, UserRow } from '../../shared/types.ts';
+import { UNITS, type BackupInfo, type Category, type Kind, type Unit, type UserRow } from '../../shared/types.ts';
 import { ApiError, api } from '../api.ts';
 import { Spinner } from '../components.tsx';
 import { useSession } from '../session.tsx';
@@ -9,6 +9,7 @@ export function Settings() {
     <div className="admin-stack">
       <People />
       <Categories />
+      <Backups />
     </div>
   );
 }
@@ -160,6 +161,7 @@ function Categories() {
                   <span lang="hi">{c.nameHi}</span>
                   {!c.showOnEntry && c.kind !== 'capital' && <span className="pill">Hidden from users</span>}
                   {c.tracksWorkers && <span className="pill">Asks worker count</span>}
+                  {c.unit && <span className="pill">Asks quantity ({c.unit})</span>}
                   {!c.active && <span className="pill pill-expense">Archived</span>}
                 </div>
                 <div className="settings-actions">
@@ -184,6 +186,7 @@ function CategoryForm({ category, onDone }: { category?: Category; onDone: (chan
     sort: category?.sort ?? 100,
     showOnEntry: category?.showOnEntry ?? true,
     tracksWorkers: category?.tracksWorkers ?? false,
+    unit: category?.unit ?? (null as Unit | null),
     active: category?.active ?? true,
   });
   const [err, setErr] = useState<string | null>(null);
@@ -214,6 +217,12 @@ function CategoryForm({ category, onDone }: { category?: Category; onDone: (chan
         <label className="field"><span>English name</span><input className="input" value={v.nameEn} onChange={(e) => setV({ ...v, nameEn: e.target.value })} required maxLength={60} /></label>
         <label className="field"><span>Hindi name</span><input className="input" lang="hi" value={v.nameHi} onChange={(e) => setV({ ...v, nameHi: e.target.value })} required maxLength={60} /></label>
         <label className="field"><span>Icon (one emoji)</span><input className="input" value={v.icon} onChange={(e) => setV({ ...v, icon: e.target.value })} maxLength={16} /></label>
+        <label className="field"><span>Ask for quantity sold</span>
+          <select className="select" value={v.unit ?? ''} onChange={(e) => setV({ ...v, unit: (e.target.value || null) as Unit | null })}>
+            <option value="">No</option>
+            {UNITS.map((u) => <option key={u} value={u}>Yes, in {u}</option>)}
+          </select>
+        </label>
         <label className="field"><span>Order (lower comes first)</span><input className="input" type="number" min={0} max={10000} value={v.sort} onChange={(e) => setV({ ...v, sort: Number(e.target.value) })} /></label>
       </div>
       <div className="filters-toggles">
@@ -227,5 +236,66 @@ function CategoryForm({ category, onDone }: { category?: Category; onDone: (chan
         <button type="submit" className="btn btn-sm btn-primary">Save</button>
       </div>
     </form>
+  );
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function Backups() {
+  const [list, setList] = useState<BackupInfo[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const load = () => api<BackupInfo[]>('/backups').then(setList).catch(() => setMsg('Could not load backups.'));
+  useEffect(() => { load(); }, []);
+
+  const runNow = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const b = await api<BackupInfo>('/backups', { method: 'POST' });
+      const rows = b.rows ? Object.entries(b.rows).map(([t, n]) => `${n} ${t.replace('_', ' ')}`).join(', ') : '';
+      setMsg(`Backup saved (${formatBytes(b.size)}${rows ? `: ${rows}` : ''}).`);
+      load();
+    } catch {
+      setMsg('Backup failed. Try again in a minute.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="card panel">
+      <div className="panel-head">
+        <div>
+          <h2>Backups</h2>
+          <p className="muted">
+            A full copy of the data is saved every Sunday at 2 AM and kept. Photos are stored separately and are not
+            changed by a restore. The README explains how to restore a backup.
+          </p>
+        </div>
+        <button type="button" className="btn btn-sm btn-primary" disabled={busy} onClick={runNow}>{busy ? 'Backing up…' : 'Back up now'}</button>
+      </div>
+      {msg && <p className="banner" role="status">{msg}</p>}
+      {!list ? <Spinner /> : list.length === 0 ? <p className="muted">No backups yet. The first one runs this Sunday, or press "Back up now".</p> : (
+        <div className="settings-list">
+          {list.map((b) => (
+            <div key={b.key} className="settings-row">
+              <div className="settings-main">
+                <strong>{new Date(b.uploaded).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</strong>
+                <span className="faint">{formatBytes(b.size)}</span>
+              </div>
+              <div className="settings-actions">
+                <a className="btn btn-sm" href={`/api/backups/download?key=${encodeURIComponent(b.key)}`}>Download</a>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
